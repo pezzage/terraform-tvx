@@ -1,0 +1,18 @@
+---
+- name: Download wp core
+  shell: php /tmp/wp-cli.phar --path={{ path|quote }} core download
+
+- name: Create Wordpress config file
+  shell: php /tmp/wp-cli.phar --path={{ path|quote }} config create --dbname={{ db_name|quote }} --dbuser={{ db_user|quote}} --dbpass={{ db_pass|quote}} --dbhost={{ db_host|quote}}
+
+- name: Install Wordpress
+  shell: php /tmp/wp-cli.phar --path={{ path|quote }} core install --url={{url|quote}} --title="{{blog_title|quote}}" --admin_user="{{admin_user|quote}}" --admin_email="{{admin_email|quote}}" --admin_password="{{admin_pass|quote}}"
+
+- name: Install simple-history plugin
+  shell: php /tmp/wp-cli.phar --path={{ path|quote }} plugin install simple-history --activate
+
+- name: Install cloudimage plugin
+  shell: php /tmp/wp-cli.phar --path={{ path|quote }} plugin install cloudimage --activate
+
+- name: Install g-business-reviews-rating plugin
+  shell: php /tmp/wp-cli.phar --path={{ path|quote }} plugin install g-business-reviews-rating --activate

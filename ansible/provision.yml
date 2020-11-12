@@ -1,0 +1,63 @@
+---
+- name: Install Apache, PHP and mysql-client
+  hosts: all
+  become: True
+  tasks:
+    - name: Update package lists
+      apt:
+        update_cache: yes
+
+    - name: Install apache, php and mysql-client
+      apt:
+        pkg:
+          - apache2
+          - php7.4-mysql 
+          - php7.4-cli
+          - libapache2-mod-php
+          - mysql-client
+
+    - name: Chown /var/www/html to be owned by the ubuntu user
+      file: dest=/var/www/html owner=ubuntu group=ubuntu recurse=yes
+
+    - name: Remove /var/www/html/index.html
+      file:
+        path: /var/www/html/index.html
+        state: absent
+
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
+
+    - name: Copy wp-cli.phar into /tmp
+      copy:
+        src: ./files/wp-cli.phar
+        dest: /tmp/wp-cli.phar
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Replace openssl.conf to allow TLSv1 when connecting to RDS (https://stackoverflow.com/questions/61649764/mysql-error-2026-ssl-connection-error-ubuntu-20-04)
+      copy:
+        src: ./files/openssl.cnf
+        dest: /usr/lib/ssl/openssl.cnf
+        owner: root
+        group: root
+
+    - name: check if wp-config.phpexists
+      stat: 
+        path: /var/www/html/wp-config.php
+      register: wpconfigfile
+
+    - name: Add SSH key
+      authorized_key:
+        user: ubuntu
+        state: present
+        key: "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAgEAwRFCL5R4I3tTNr4cq7PyuB6+/PbvAvPzlqeFW8/4SuiR9lJErZvm/UwEuETCOe9WNHMvWwcOGJ6SAmv+GMFD7zCNBaKuih9whhGyFnKr04vt6l83HgzxvA1edmyDLtqKwUi9l9laUamiRprkFbDkcCaAlh1LLYcs/D0VpItZuJLlxi6v08Ud6bGDfUT5Kz7txO9XM3hY91YuOErq4j3AQTcgxTvil78zt7VXAqWlGtjR8BE++wQJf2BSaaM+UZNhtJynoFjRnMbZCx63yQEF9zMDruOBc1RKv6z9HE0dii5B+buT1Wk2DqAlAvgd5VeB8d58dT2IjZ3n+Q1k740CVC/wqiyMZ8Br9qiHOK9vcaV6BL4J/R0MoHIz5kzu2lMYUt0gWqSfqFhZ0t3nvqLE1/6uNAHW78wnlwtwhw59+8Iwe76gOW8/QE34kGR+R8Ey5Kw2QN/3zOiuPkSlgnIfCTx/W/ZbGQzZ5xPj2OfUri2ecnUc6QUSKS2DX8Zn3imckWy0ur82Vevr7y8qJAOO0jFHXGO5EiXttemWJA2yf/C04Xn9fS3DSd5EFbHAKA+rlJuxS7jpC9cxTr/EcLHgiP3DnCgcj8ExyL/SSJV6jbVs5DbIR5QmqLFhfP0HckH2pZ6NNe3WxWKMax4fFrHtbSh8CRFW8nVS6ZTA2AYi3Hs= Indrek Kalluste"
+
+    - name: Configure Wordpress
+      include: wordpress.yml
+      become: true
+      become_method: su
+      become_user: ubuntu
+      when: wpconfigfile.stat.exists == False
